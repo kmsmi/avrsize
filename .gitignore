@@ -89,3 +89,4 @@ avrsize/parser/main.pas
 avrsize/parser/Parser.dpr
 avrsize/parser/Parser.dproj
 avrsize/parser/Parser.res
+avrsize/bin/db.json

@@ -68,7 +68,7 @@ var
   PI: TProcessInformation;
   StdOutPipeRead, StdOutPipeWrite: THandle;
   WasOK: Boolean;
-  Buffer: array [0 .. 255] of AnsiChar;
+  Buffer: array[0..255] of AnsiChar;
   BytesRead: Cardinal;
   Line: AnsiString;
 begin
@@ -99,21 +99,21 @@ begin
     if not WasOK then
       raise Exception.Create('Could not execute command line!')
     else
-      try
-        Line := '';
-        repeat
-          WasOK := ReadFile(StdOutPipeRead, Buffer, 255, BytesRead, nil);
-          if BytesRead > 0 then
-          begin
-            Buffer[BytesRead] := #0;
-            Line := Line + Buffer;
-          end;
-        until not WasOK or (BytesRead < 255);
-        WaitForSingleObject(PI.hProcess, INFINITE);
-      finally
-        CloseHandle(PI.hThread);
-        CloseHandle(PI.hProcess);
-      end;
+    try
+      Line := '';
+      repeat
+        WasOK := ReadFile(StdOutPipeRead, Buffer, 255, BytesRead, nil);
+        if BytesRead > 0 then
+        begin
+          Buffer[BytesRead] := #0;
+          Line := Line + Buffer;
+        end;
+      until not WasOK or (BytesRead < 255);
+      WaitForSingleObject(PI.hProcess, INFINITE);
+    finally
+      CloseHandle(PI.hThread);
+      CloseHandle(PI.hProcess);
+    end;
   finally
     result := string(Line);
     CloseHandle(StdOutPipeRead);
@@ -209,11 +209,12 @@ begin
 
       if flash_size = 0 then
       begin
-        Writeln('fail');
+        SetColor(cRed);
+        Writeln('avrsize: fail');
+        SetColor(cDef);
         Application.Terminate;
         Exit;
       end;
-
       Writeln('Checking size ' + elf);
       Line := ConsoleExec(app, '-B -d ' + elf);
 
@@ -227,7 +228,7 @@ begin
 
         Perc := 100 / (ram_size / u1);
         Writeln(Format('RAM:   [%s]%6.1f%% (used %d bytes from %d bytes)',
-          [PercentToSymbol(Perc), Perc, u1, ram_size], FloatFormat));
+            [PercentToSymbol(Perc), Perc, u1, ram_size], FloatFormat));
       end;
 
       RegEx := TRegEx.Create(REGEX_FLASH);
@@ -238,7 +239,7 @@ begin
       Perc := 100 / (flash_size / u2);
 
       Writeln(Format('FLASH: [%s]%6.1f%% (used %d bytes from %d bytes)',
-        [PercentToSymbol(Perc), Perc, u2, flash_size], FloatFormat));
+          [PercentToSymbol(Perc), Perc, u2, flash_size], FloatFormat));
 
       if ram_size <> 0 then
         if ram_size < u1 then
@@ -246,7 +247,7 @@ begin
           SetColor(cYellow);
           Writeln(Format
             ('Warning! The data size (%d bytes) is greater than maximum allowed (%d bytes)',
-            [u1, ram_size]));
+              [u1, ram_size]));
           SetColor(cDef);
         end;
 
@@ -255,7 +256,7 @@ begin
         SetColor(cRed);
         Writeln(Format
           ('Error: The program size (%d bytes) is greater than maximum allowed (%d bytes)',
-          [u2, flash_size]));
+            [u2, flash_size]));
         SetColor(cDef);
       end;
     except
@@ -306,11 +307,12 @@ begin
     cYellow:
       wAttributes := FOREGROUND_RED or FOREGROUND_GREEN;
     cGreen:
-      ;
+      wAttributes := FOREGROUND_GREEN or FOREGROUND_INTENSITY;
     cBlue:
-      ;
+      wAttributes := FOREGROUND_BLUE or FOREGROUND_INTENSITY;
   end;
   SetConsoleTextAttribute(hConsole, wAttributes);
 end;
 
 end.
+
