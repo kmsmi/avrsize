@@ -16,9 +16,9 @@
 avrsize.exe --mcu=atmega16 --app=c:\dev\avr\bin\avr-size.exe --target=c:\projects\my_project\bin\firmware.elf
 </pre>
 
-![](\avrsize\pictures\console.png)  
+![console](avrsize/pictures/console.png)  
 
-![](\avrsize\(pictures\console_err.png)
+![console_err](avrsize/pictures/console_err.png)
 
 ### Вызов через CMakeLists.txt: 
 
@@ -33,7 +33,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${MY_AVRSIZE} --app=${AVRBIN}/${AVRSIZE} --target=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}.elf --mcu=${DEVICE}
 )
 </pre>
-![](\avrsize\pictures\cmake.png) 
+![cmake](avrsize/pictures/cmake.png) 
 
 <hr>
 
