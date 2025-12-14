@@ -57,6 +57,12 @@
 *.o
 *.ocx
 
+/parser/*.dfm
+/parser/*.pas
+/parser/*.dpr
+/parser/*.dproj
+/parser/*.res
+
 !/bin/avrsize.exe
 !/parser/bin/Parser.exe
 
@@ -83,3 +89,4 @@ __recovery/
 
 # Boss dependency manager vendor folder https://github.com/HashLoad/boss
 modules/
+avrsize/avrsize.res
