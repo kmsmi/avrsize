@@ -158,7 +158,7 @@ begin
   if ParamCount < 3 then
   begin
     SetColor(cRed);
-    Writeln('Not enough parameters');
+    Writeln('avrsize: Not enough parameters');
     SetColor(cDef);
     usage();
     Application.Terminate;
@@ -171,7 +171,7 @@ begin
   if (not FileExists(app)) then
   begin
     SetColor(cRed);
-    Writeln('avr-size not found');
+    Writeln('avrsize: avr-size not found');
     SetColor(cDef);
     usage();
     Application.Terminate;
@@ -181,9 +181,18 @@ begin
   if (not FileExists(elf)) then
   begin
     SetColor(cRed);
-    Writeln('*.elf not found');
+    Writeln('avrsize: elf file not found');
     SetColor(cDef);
     usage();
+    Application.Terminate;
+    Exit;
+  end;
+
+  if not FileExists(ExtractFilePath(ParamStr(0)) + 'db.json') then
+  begin
+    SetColor(cRed);
+    Writeln('avrsize: db.json file not found');
+    SetColor(cDef);
     Application.Terminate;
     Exit;
   end;
