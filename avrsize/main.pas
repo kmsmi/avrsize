@@ -23,20 +23,16 @@ const
   FloatFormat: TFormatSettings = (DecimalSeparator: '.');
 
 const
-  // ÷вета текста (Foreground)
-  FOREGROUND_RED = $0004;
-  FOREGROUND_GREEN = $0002;
-  FOREGROUND_BLUE = $0001;
-  FOREGROUND_INTENSITY = $0008; // яркость
-
-  // ÷вета фона (Background)
-  BACKGROUND_RED = $0040;
-  BACKGROUND_GREEN = $0020;
-  BACKGROUND_BLUE = $0010;
-  BACKGROUND_INTENSITY = $0080; // яркость фона
+  FG_RED = #$1B'[31;1m';
+  FG_GREEN = #$1B'[32;1m';
+  FG_YELLOW = #$1B'[33;1m';
+  FG_BLUE = #$1B'[34;1m';
+  FG_END = #$1B'[0m';
 
 type
   TCcolor = (cDef, cRed, cYellow, cGreen, cBlue);
+
+  TTypeMsg = (mNone, mWarning, mError, mOk);
 
 type
   TfrmMain = class(TForm)
@@ -47,7 +43,8 @@ type
     { Private declarations }
     function PercentToSymbol(const Percent: Single): string;
     procedure ParseParam(const param: string);
-    procedure SetColor(color: TCcolor);
+//    procedure SetColor(color: TCcolor);
+    procedure SendMsg(t: TTypeMsg; msg: string);
   public
     { Public declarations }
   end;
@@ -139,7 +136,8 @@ var
   RegEx: TRegEx;
   M: TMatchCollection;
   Perc: Single;
-  u1, u2: integer;
+  u: integer;
+  ram_err, flash_err: string;
   Line: string;
   i: integer;
   SO: ISuperObject;
@@ -157,9 +155,7 @@ begin
 
   if ParamCount < 3 then
   begin
-    SetColor(cRed);
-    Writeln('avrsize: Not enough parameters');
-    SetColor(cDef);
+    SendMsg(mError, 'avrsize: Not enough parameters');
     usage();
     Application.Terminate;
     Exit;
@@ -170,9 +166,7 @@ begin
 
   if (not FileExists(app)) then
   begin
-    SetColor(cRed);
-    Writeln('avrsize: avr-size not found');
-    SetColor(cDef);
+    SendMsg(mError, 'avrsize: avr-size not found');
     usage();
     Application.Terminate;
     Exit;
@@ -180,9 +174,7 @@ begin
 
   if (not FileExists(elf)) then
   begin
-    SetColor(cRed);
-    Writeln('avrsize: elf file not found');
-    SetColor(cDef);
+    SendMsg(mError, 'avrsize: elf file not found');
     usage();
     Application.Terminate;
     Exit;
@@ -190,9 +182,7 @@ begin
 
   if not FileExists(ExtractFilePath(ParamStr(0)) + 'db.json') then
   begin
-    SetColor(cRed);
-    Writeln('avrsize: db.json file not found');
-    SetColor(cDef);
+    SendMsg(mError, 'avrsize: db.json file not found');
     Application.Terminate;
     Exit;
   end;
@@ -209,58 +199,52 @@ begin
 
       if flash_size = 0 then
       begin
-        SetColor(cRed);
-        Writeln('avrsize: fail');
-        SetColor(cDef);
+        SendMsg(mError, 'avrsize: fail');
         Application.Terminate;
         Exit;
       end;
       Writeln('Checking size ' + elf);
       Line := ConsoleExec(app, '-B -d ' + elf);
 
+      ram_err := '';
+      flash_err := '';
       if ram_size <> 0 then
       begin
         RegEx := TRegEx.Create(REGEX_DATA);
         M := RegEx.Matches(Line);
 
-        u1 := M.Item[0].Groups[1].Value.ToInteger + M.Item[0].Groups[2]
+        u := M.Item[0].Groups[1].Value.ToInteger + M.Item[0].Groups[2]
           .Value.ToInteger;
 
-        Perc := 100 / (ram_size / u1);
+        Perc := 100 / (ram_size / u);
         Writeln(Format('RAM:   [%s]%6.1f%% (used %d bytes from %d bytes)',
-            [PercentToSymbol(Perc), Perc, u1, ram_size], FloatFormat));
+            [PercentToSymbol(Perc), Perc, u, ram_size], FloatFormat));
+
+        if ram_size < u then
+          ram_err := Format('Warning! The data size (%d bytes) is greater than maximum allowed (%d bytes)',
+            [u, ram_size]);
       end;
 
       RegEx := TRegEx.Create(REGEX_FLASH);
       M := RegEx.Matches(Line);
 
-      u2 := M.Item[0].Groups[1].Value.ToInteger + M.Item[0].Groups[2]
+      u := M.Item[0].Groups[1].Value.ToInteger + M.Item[0].Groups[2]
         .Value.ToInteger;
-      Perc := 100 / (flash_size / u2);
+      Perc := 100 / (flash_size / u);
 
       Writeln(Format('FLASH: [%s]%6.1f%% (used %d bytes from %d bytes)',
-          [PercentToSymbol(Perc), Perc, u2, flash_size], FloatFormat));
+          [PercentToSymbol(Perc), Perc, u, flash_size], FloatFormat));
 
-      if ram_size <> 0 then
-        if ram_size < u1 then
-        begin
-          SetColor(cYellow);
-          Writeln(Format
-            ('Warning! The data size (%d bytes) is greater than maximum allowed (%d bytes)',
-              [u1, ram_size]));
-          SetColor(cDef);
-        end;
+      if ram_err <> '' then
+        SendMsg(mWarning, ram_err);
 
-      if flash_size < u2 then
+      if flash_size < u then
       begin
-        SetColor(cRed);
-        Writeln(Format
-          ('Error: The program size (%d bytes) is greater than maximum allowed (%d bytes)',
-            [u2, flash_size]));
-        SetColor(cDef);
+        SendMsg(mError, Format('Error: The program size (%d bytes) is greater than maximum allowed (%d bytes)',
+            [u, flash_size]));
       end;
     except
-      Writeln('Error');
+      SendMsg(mError, 'avrsize: Error');
     end;
   finally
     fs.Free;
@@ -297,21 +281,21 @@ begin
   result := s;
 end;
 
-procedure TfrmMain.SetColor(color: TCcolor);
+procedure TfrmMain.SendMsg(t: TTypeMsg; msg: string);
+var
+  s: string;
 begin
-  case color of
-    cDef:
-      wAttributes := FOREGROUND_RED or FOREGROUND_GREEN or FOREGROUND_BLUE;
-    cRed:
-      wAttributes := FOREGROUND_RED or FOREGROUND_INTENSITY;
-    cYellow:
-      wAttributes := FOREGROUND_RED or FOREGROUND_GREEN;
-    cGreen:
-      wAttributes := FOREGROUND_GREEN or FOREGROUND_INTENSITY;
-    cBlue:
-      wAttributes := FOREGROUND_BLUE or FOREGROUND_INTENSITY;
+  case t of
+    mWarning:
+      s := FG_YELLOW + msg + FG_END;
+    mError:
+      s := FG_RED + msg + FG_END;
+    mOk:
+      s := FG_GREEN + msg + FG_END;
+  else
+    s := msg;
   end;
-  SetConsoleTextAttribute(hConsole, wAttributes);
+  Writeln(s);
 end;
 
 end.
