@@ -27,12 +27,35 @@ const
   FG_GREEN = #$1B'[32;1m';
   FG_YELLOW = #$1B'[33;1m';
   FG_BLUE = #$1B'[34;1m';
+  FG_Cyan = #$1B'[36;1m';
   FG_END = #$1B'[0m';
+
+  //Regular Colors
+//  FG_Black = #$1B'[4;30m';
+//  FG_Red = #$1B'[4;31m';
+//  FG_Green = #$1B'[4;32m';
+//  FG_Yellow = #$1B'[4;33m';
+//  FG_Blue = #$1B'[4;34m';
+//  FG_Purple = #$1B'[4;35m';
+//  FG_Cyan = #$1B'[4;36m';
+//  FG_White = #$1B'[4;37m';
+
+  //High Intensity
+//  Black = #$1B'[0;90m';
+//  Red = #$1B'[0;91m';
+//  Green = #$1B'[0;92m';
+//  Yellow = #$1B'[0;93m';
+//  Blue = #$1B'[0;94m';
+//  Purple = #$1B'[0;95m';
+//  Cyan = #$1B'[0;96m';
+//  White = #$1B'[0;97m';
+  // Reset
+//  FG_END = #$1B'[0m';
 
 type
   TCcolor = (cDef, cRed, cYellow, cGreen, cBlue);
 
-  TTypeMsg = (mNone, mWarning, mError, mOk);
+  TTypeMsg = (mNone, mWarning, mError, mOk, mQuest, mInfo);
 
 type
   TfrmMain = class(TForm)
@@ -43,7 +66,6 @@ type
     { Private declarations }
     function PercentToSymbol(const Percent: Single): string;
     procedure ParseParam(const param: string);
-//    procedure SetColor(color: TCcolor);
     procedure SendMsg(t: TTypeMsg; msg: string);
   public
     { Public declarations }
@@ -144,7 +166,8 @@ var
   fs: TFileStream;
 begin
   Application.ShowMainForm := False;
-  hConsole := GetStdHandle(STD_OUTPUT_HANDLE);
+
+  SendMsg(mInfo, 'Memory Usage...');
 
   if ParamCount = 0 then
   begin
@@ -155,7 +178,7 @@ begin
 
   if ParamCount < 3 then
   begin
-    SendMsg(mError, 'avrsize: Not enough parameters');
+    SendMsg(mError, 'Not enough parameters');
     usage();
     Application.Terminate;
     Exit;
@@ -166,7 +189,7 @@ begin
 
   if (not FileExists(app)) then
   begin
-    SendMsg(mError, 'avrsize: avr-size not found');
+    SendMsg(mError, 'avr-size not found');
     usage();
     Application.Terminate;
     Exit;
@@ -174,7 +197,7 @@ begin
 
   if (not FileExists(elf)) then
   begin
-    SendMsg(mError, 'avrsize: elf file not found');
+    SendMsg(mError, 'elf file "' + elf + '" not found');
     usage();
     Application.Terminate;
     Exit;
@@ -182,7 +205,7 @@ begin
 
   if not FileExists(ExtractFilePath(ParamStr(0)) + 'db.json') then
   begin
-    SendMsg(mError, 'avrsize: db.json file not found');
+    SendMsg(mError, 'db.json file not found');
     Application.Terminate;
     Exit;
   end;
@@ -244,7 +267,7 @@ begin
             [u, flash_size]));
       end;
     except
-      SendMsg(mError, 'avrsize: Error');
+      SendMsg(mError, 'Error');
     end;
   finally
     fs.Free;
@@ -292,6 +315,10 @@ begin
       s := FG_RED + msg + FG_END;
     mOk:
       s := FG_GREEN + msg + FG_END;
+    mQuest:
+      s := FG_BLUE + msg + FG_END;
+    mInfo:
+      s := FG_Cyan + msg + FG_END;
   else
     s := msg;
   end;
