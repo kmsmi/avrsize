@@ -5,22 +5,14 @@ unit main;
 interface
 
 uses
-  Winapi.Windows,
-  Winapi.Messages,
-  System.SysUtils,
-  System.Variants,
-  System.Classes,
-  Vcl.Graphics,
-  Vcl.Controls,
-  Vcl.Forms,
-  Vcl.Dialogs,
-  System.RegularExpressions,
-  Vcl.StdCtrls,
-  XSuperObject,
-  XSuperJSON;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  System.RegularExpressions, Vcl.StdCtrls, XSuperObject, XSuperJSON;
 
 const
-  FloatFormat: TFormatSettings = (DecimalSeparator: '.');
+  FloatFormat: TFormatSettings = (
+    DecimalSeparator: '.'
+  );
 
 const
   FG_RED = #$1B'[31;1m';
@@ -68,7 +60,7 @@ type
     procedure ParseParam(const param: string);
     procedure SendMsg(t: TTypeMsg; msg: string);
     function FindProgramInPath(const ExecutableName: string): string;
-    function AppExist(const app: string): string;
+//    function AppExist(const app: string): string;
   public
     { Public declarations }
   end;
@@ -89,7 +81,7 @@ var
   PI: TProcessInformation;
   StdOutPipeRead, StdOutPipeWrite: THandle;
   WasOK: Boolean;
-  Buffer: array [0 .. 255] of AnsiChar;
+  Buffer: array[0..255] of AnsiChar;
   BytesRead: Cardinal;
   Line: AnsiString;
 begin
@@ -113,28 +105,27 @@ begin
       hStdError := StdOutPipeWrite;
     end;
 
-    WasOK := CreateProcess(PChar(AppRun), PChar(CommandLine), nil, nil, True, 0,
-      nil, nil, SI, PI);
+    WasOK := CreateProcess(PChar(AppRun), PChar(CommandLine), nil, nil, True, 0, nil, nil, SI, PI);
 
     CloseHandle(StdOutPipeWrite);
     if not WasOK then
       raise Exception.Create('Could not execute command line!')
     else
-      try
-        Line := '';
-        repeat
-          WasOK := ReadFile(StdOutPipeRead, Buffer, 255, BytesRead, nil);
-          if BytesRead > 0 then
-          begin
-            Buffer[BytesRead] := #0;
-            Line := Line + Buffer;
-          end;
-        until not WasOK or (BytesRead < 255);
-        WaitForSingleObject(PI.hProcess, INFINITE);
-      finally
-        CloseHandle(PI.hThread);
-        CloseHandle(PI.hProcess);
-      end;
+    try
+      Line := '';
+      repeat
+        WasOK := ReadFile(StdOutPipeRead, Buffer, 255, BytesRead, nil);
+        if BytesRead > 0 then
+        begin
+          Buffer[BytesRead] := #0;
+          Line := Line + Buffer;
+        end;
+      until not WasOK or (BytesRead < 255);
+      WaitForSingleObject(PI.hProcess, INFINITE);
+    finally
+      CloseHandle(PI.hThread);
+      CloseHandle(PI.hProcess);
+    end;
   finally
     result := string(Line);
     CloseHandle(StdOutPipeRead);
@@ -152,17 +143,17 @@ begin
   Writeln('-----------------------------------------');
 end;
 
-function TfrmMain.AppExist(const app: string): string;
-begin
-  if FileExists(app) then
-    result := app
-  else
-    result := FindProgramInPath(app);
-end;
+//function TfrmMain.AppExist(const app: string): string;
+//begin
+//  if FileExists(app) then
+//    result := app
+//  else
+//    result := FindProgramInPath(app);
+//end;
 
 function TfrmMain.FindProgramInPath(const ExecutableName: string): string;
 var
-  PathEnv, Folder, FullPath: string;
+  PathEnv, Folder, FullPath, Ext: string;
   PathList: TStringList;
   I: integer;
 begin
@@ -170,6 +161,9 @@ begin
   PathEnv := GetEnvironmentVariable('PATH');
   if PathEnv = '' then
     Exit;
+
+  if ExtractFileExt(ExecutableName) = '' then
+    Ext := ExecutableName + '.exe';
 
   PathList := TStringList.Create;
   try
@@ -183,7 +177,7 @@ begin
       if Folder = '' then
         Continue;
 
-      FullPath := IncludeTrailingPathDelimiter(Folder) + ExecutableName;
+      FullPath := IncludeTrailingPathDelimiter(Folder) + Ext;
       if FileExists(FullPath) then
       begin
         result := FullPath;
@@ -255,8 +249,7 @@ begin
     Exit;
   end;
 
-  fs := TFileStream.Create(ExtractFilePath(ParamStr(0)) + 'db.json',
-    fmOpenRead);
+  fs := TFileStream.Create(ExtractFilePath(ParamStr(0)) + 'db.json', fmOpenRead);
 
   try
     try
@@ -281,37 +274,29 @@ begin
         RegEx := TRegEx.Create(REGEX_DATA);
         M := RegEx.Matches(Line);
 
-        u := M.Item[0].Groups[1].Value.ToInteger + M.Item[0].Groups[2]
-          .Value.ToInteger;
+        u := M.Item[0].Groups[1].Value.ToInteger + M.Item[0].Groups[2].Value.ToInteger;
 
         Perc := 100 / (ram_size / u);
-        Writeln(Format('RAM:   [%s]%6.1f%% (used %d bytes from %d bytes)',
-          [PercentToSymbol(Perc), Perc, u, ram_size], FloatFormat));
+        Writeln(Format('RAM:   [%s]%6.1f%% (used %d bytes from %d bytes)', [PercentToSymbol(Perc), Perc, u, ram_size], FloatFormat));
 
         if ram_size < u then
-          ram_err :=
-            Format('Warning! The data size (%d bytes) is greater than maximum allowed (%d bytes)',
-            [u, ram_size]);
+          ram_err := Format('Warning! The data size (%d bytes) is greater than maximum allowed (%d bytes)', [u, ram_size]);
       end;
 
       RegEx := TRegEx.Create(REGEX_FLASH);
       M := RegEx.Matches(Line);
 
-      u := M.Item[0].Groups[1].Value.ToInteger + M.Item[0].Groups[2]
-        .Value.ToInteger;
+      u := M.Item[0].Groups[1].Value.ToInteger + M.Item[0].Groups[2].Value.ToInteger;
       Perc := 100 / (flash_size / u);
 
-      Writeln(Format('FLASH: [%s]%6.1f%% (used %d bytes from %d bytes)',
-        [PercentToSymbol(Perc), Perc, u, flash_size], FloatFormat));
+      Writeln(Format('FLASH: [%s]%6.1f%% (used %d bytes from %d bytes)', [PercentToSymbol(Perc), Perc, u, flash_size], FloatFormat));
 
       if ram_err <> '' then
         SendMsg(mWarning, ram_err);
 
       if flash_size < u then
       begin
-        SendMsg(mError,
-          Format('Error: The program size (%d bytes) is greater than maximum allowed (%d bytes)',
-          [u, flash_size]));
+        SendMsg(mError, Format('Error: The program size (%d bytes) is greater than maximum allowed (%d bytes)', [u, flash_size]));
       end;
     except
       SendMsg(mError, 'Error');
@@ -330,7 +315,7 @@ begin
   begin
     app := Copy(param, 7, Length(param) - 6);
     if not FileExists(app) then
-    app := FindProgramInPath(app);
+      app := FindProgramInPath(app);
   end
   else if Pos('target', param) > 1 then
     elf := Copy(param, 10, Length(param) - 9);
@@ -377,3 +362,4 @@ begin
 end;
 
 end.
+
