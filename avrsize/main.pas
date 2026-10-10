@@ -30,27 +30,27 @@ const
   FG_Cyan = #$1B'[36;1m';
   FG_END = #$1B'[0m';
 
-  //Regular Colors
-//  FG_Black = #$1B'[4;30m';
-//  FG_Red = #$1B'[4;31m';
-//  FG_Green = #$1B'[4;32m';
-//  FG_Yellow = #$1B'[4;33m';
-//  FG_Blue = #$1B'[4;34m';
-//  FG_Purple = #$1B'[4;35m';
-//  FG_Cyan = #$1B'[4;36m';
-//  FG_White = #$1B'[4;37m';
+  // Regular Colors
+  // FG_Black = #$1B'[4;30m';
+  // FG_Red = #$1B'[4;31m';
+  // FG_Green = #$1B'[4;32m';
+  // FG_Yellow = #$1B'[4;33m';
+  // FG_Blue = #$1B'[4;34m';
+  // FG_Purple = #$1B'[4;35m';
+  // FG_Cyan = #$1B'[4;36m';
+  // FG_White = #$1B'[4;37m';
 
-  //High Intensity
-//  Black = #$1B'[0;90m';
-//  Red = #$1B'[0;91m';
-//  Green = #$1B'[0;92m';
-//  Yellow = #$1B'[0;93m';
-//  Blue = #$1B'[0;94m';
-//  Purple = #$1B'[0;95m';
-//  Cyan = #$1B'[0;96m';
-//  White = #$1B'[0;97m';
+  // High Intensity
+  // Black = #$1B'[0;90m';
+  // Red = #$1B'[0;91m';
+  // Green = #$1B'[0;92m';
+  // Yellow = #$1B'[0;93m';
+  // Blue = #$1B'[0;94m';
+  // Purple = #$1B'[0;95m';
+  // Cyan = #$1B'[0;96m';
+  // White = #$1B'[0;97m';
   // Reset
-//  FG_END = #$1B'[0m';
+  // FG_END = #$1B'[0m';
 
 type
   TCcolor = (cDef, cRed, cYellow, cGreen, cBlue);
@@ -67,6 +67,8 @@ type
     function PercentToSymbol(const Percent: Single): string;
     procedure ParseParam(const param: string);
     procedure SendMsg(t: TTypeMsg; msg: string);
+    function FindProgramInPath(const ExecutableName: string): string;
+    function AppExist(const app: string): string;
   public
     { Public declarations }
   end;
@@ -87,7 +89,7 @@ var
   PI: TProcessInformation;
   StdOutPipeRead, StdOutPipeWrite: THandle;
   WasOK: Boolean;
-  Buffer: array[0..255] of AnsiChar;
+  Buffer: array [0 .. 255] of AnsiChar;
   BytesRead: Cardinal;
   Line: AnsiString;
 begin
@@ -118,21 +120,21 @@ begin
     if not WasOK then
       raise Exception.Create('Could not execute command line!')
     else
-    try
-      Line := '';
-      repeat
-        WasOK := ReadFile(StdOutPipeRead, Buffer, 255, BytesRead, nil);
-        if BytesRead > 0 then
-        begin
-          Buffer[BytesRead] := #0;
-          Line := Line + Buffer;
-        end;
-      until not WasOK or (BytesRead < 255);
-      WaitForSingleObject(PI.hProcess, INFINITE);
-    finally
-      CloseHandle(PI.hThread);
-      CloseHandle(PI.hProcess);
-    end;
+      try
+        Line := '';
+        repeat
+          WasOK := ReadFile(StdOutPipeRead, Buffer, 255, BytesRead, nil);
+          if BytesRead > 0 then
+          begin
+            Buffer[BytesRead] := #0;
+            Line := Line + Buffer;
+          end;
+        until not WasOK or (BytesRead < 255);
+        WaitForSingleObject(PI.hProcess, INFINITE);
+      finally
+        CloseHandle(PI.hThread);
+        CloseHandle(PI.hProcess);
+      end;
   finally
     result := string(Line);
     CloseHandle(StdOutPipeRead);
@@ -150,6 +152,49 @@ begin
   Writeln('-----------------------------------------');
 end;
 
+function TfrmMain.AppExist(const app: string): string;
+begin
+  if FileExists(app) then
+    result := app
+  else
+    result := FindProgramInPath(app);
+end;
+
+function TfrmMain.FindProgramInPath(const ExecutableName: string): string;
+var
+  PathEnv, Folder, FullPath: string;
+  PathList: TStringList;
+  I: integer;
+begin
+  result := '';
+  PathEnv := GetEnvironmentVariable('PATH');
+  if PathEnv = '' then
+    Exit;
+
+  PathList := TStringList.Create;
+  try
+    PathList.Delimiter := ';';
+    PathList.StrictDelimiter := True;
+    PathList.DelimitedText := PathEnv;
+
+    for I := 0 to PathList.Count - 1 do
+    begin
+      Folder := Trim(PathList[I]);
+      if Folder = '' then
+        Continue;
+
+      FullPath := IncludeTrailingPathDelimiter(Folder) + ExecutableName;
+      if FileExists(FullPath) then
+      begin
+        result := FullPath;
+        Break;
+      end;
+    end;
+  finally
+    PathList.Free;
+  end;
+end;
+
 procedure TfrmMain.FormCreate(Sender: TObject);
 const
   REGEX_FLASH = '(\d+)\s+(\d+)\s+\d+\s';
@@ -161,7 +206,7 @@ var
   u: integer;
   ram_err, flash_err: string;
   Line: string;
-  i: integer;
+  I: integer;
   SO: ISuperObject;
   fs: TFileStream;
 begin
@@ -184,10 +229,10 @@ begin
     Exit;
   end;
 
-  for i := 1 to ParamCount do
-    ParseParam(ParamStr(i));
+  for I := 1 to ParamCount do
+    ParseParam(ParamStr(I));
 
-  if (not FileExists(app)) then
+  if (app = '') then
   begin
     SendMsg(mError, 'avr-size not found');
     usage();
@@ -217,8 +262,8 @@ begin
     try
       SO := TSuperObject.ParseStream(fs);
 
-      flash_size := SO.O[mcu].i['flash_size'];
-      ram_size := SO.O[mcu].i['ram_size'];
+      flash_size := SO.O[mcu].I['flash_size'];
+      ram_size := SO.O[mcu].I['ram_size'];
 
       if flash_size = 0 then
       begin
@@ -241,10 +286,11 @@ begin
 
         Perc := 100 / (ram_size / u);
         Writeln(Format('RAM:   [%s]%6.1f%% (used %d bytes from %d bytes)',
-            [PercentToSymbol(Perc), Perc, u, ram_size], FloatFormat));
+          [PercentToSymbol(Perc), Perc, u, ram_size], FloatFormat));
 
         if ram_size < u then
-          ram_err := Format('Warning! The data size (%d bytes) is greater than maximum allowed (%d bytes)',
+          ram_err :=
+            Format('Warning! The data size (%d bytes) is greater than maximum allowed (%d bytes)',
             [u, ram_size]);
       end;
 
@@ -256,15 +302,16 @@ begin
       Perc := 100 / (flash_size / u);
 
       Writeln(Format('FLASH: [%s]%6.1f%% (used %d bytes from %d bytes)',
-          [PercentToSymbol(Perc), Perc, u, flash_size], FloatFormat));
+        [PercentToSymbol(Perc), Perc, u, flash_size], FloatFormat));
 
       if ram_err <> '' then
         SendMsg(mWarning, ram_err);
 
       if flash_size < u then
       begin
-        SendMsg(mError, Format('Error: The program size (%d bytes) is greater than maximum allowed (%d bytes)',
-            [u, flash_size]));
+        SendMsg(mError,
+          Format('Error: The program size (%d bytes) is greater than maximum allowed (%d bytes)',
+          [u, flash_size]));
       end;
     except
       SendMsg(mError, 'Error');
@@ -280,7 +327,11 @@ begin
   if Pos('mcu', param) > 1 then
     mcu := Copy(param, 7, Length(param) - 6)
   else if Pos('app', param) > 1 then
-    app := Copy(param, 7, Length(param) - 6)
+  begin
+    app := Copy(param, 7, Length(param) - 6);
+    if not FileExists(app) then
+    app := FindProgramInPath(app);
+  end
   else if Pos('target', param) > 1 then
     elf := Copy(param, 10, Length(param) - 9);
 end;
@@ -290,16 +341,16 @@ const
   symbol = '=';
 var
   s: string;
-  i: integer;
+  I: integer;
   n: integer;
 begin
   SetLength(s, 10);
   n := Round(Percent / 10);
-  for i := 1 to Length(s) do
-    if n < i then
-      s[i] := ' '
+  for I := 1 to Length(s) do
+    if n < I then
+      s[I] := ' '
     else
-      s[i] := symbol;
+      s[I] := symbol;
 
   result := s;
 end;
@@ -326,4 +377,3 @@ begin
 end;
 
 end.
-
